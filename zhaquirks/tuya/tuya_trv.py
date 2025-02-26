@@ -842,3 +842,97 @@ class TuyaThermostatV2NoSchedule(TuyaThermostatV2):
     .skip_configuration()
     .add_to_registry()
 )
+
+
+(
+    TuyaQuirkBuilder("_TZE200_ne4pikwm", "TS0601")  # Nedis ZBHTR20WT
+    .applies_to("_TZE284_ne4pikwm", "TS0601")
+    .tuya_dp(
+        dp_id=3,
+        ep_attribute=TuyaThermostatV2.ep_attribute,
+        attribute_name=TuyaThermostatV2.AttributeDefs.running_state.name,
+        converter=lambda x: RunningState.Heat_State_On if x else RunningState.Idle,
+    )
+    .tuya_switch(
+        dp_id=8,
+        attribute_name="window_detection",
+        translation_key="window_detection",
+        fallback_name="Open window detection",
+    )
+    .tuya_switch(
+        dp_id=10,
+        attribute_name="frost_protection",
+        translation_key="frost_protection",
+        fallback_name="Frost protection",
+    )
+    .tuya_number(
+        dp_id=27,
+        attribute_name=TuyaThermostatV2.AttributeDefs.local_temperature_calibration.name,
+        type=t.int32s,
+        min_value=-6,
+        max_value=6,
+        unit=UnitOfTemperature.CELSIUS,
+        step=1,
+        translation_key="local_temperature_calibration",
+        fallback_name="Local temperature calibration",
+    )
+    .tuya_switch(
+        dp_id=40,
+        attribute_name="child_lock",
+        translation_key="child_lock",
+        fallback_name="Child lock",
+    )
+    .tuya_dp(
+        dp_id=101,
+        ep_attribute=TuyaThermostatV2.ep_attribute,
+        attribute_name=TuyaThermostatV2.AttributeDefs.system_mode.name,
+        converter=lambda x: {
+            True: Thermostat.SystemMode.Heat,
+            False: Thermostat.SystemMode.Off,
+        }[x],
+        dp_converter=lambda x: {
+            Thermostat.SystemMode.Heat: True,
+            Thermostat.SystemMode.Off: False,
+        }[x],
+    )
+    .tuya_dp(
+        dp_id=102,
+        ep_attribute=TuyaThermostatV2.ep_attribute,
+        attribute_name=TuyaThermostatV2.AttributeDefs.local_temperature.name,
+        converter=lambda x: x * 10,
+    )
+    .tuya_dp(
+        dp_id=103,
+        ep_attribute=TuyaThermostatV2.ep_attribute,
+        attribute_name=TuyaThermostatV2.AttributeDefs.occupied_heating_setpoint.name,
+        converter=lambda x: x * 10,
+        dp_converter=lambda x: x // 10,
+    )
+    .tuya_binary_sensor(
+        dp_id=105,
+        attribute_name="battery_low",
+        device_class=BinarySensorDeviceClass.BATTERY,
+        fallback_name="Battery low",
+    )
+    .tuya_switch(
+        dp_id=106,
+        attribute_name="away_mode",
+        translation_key="away_mode",
+        fallback_name="Away mode",
+    )
+    .tuya_switch(
+        dp_id=108,
+        attribute_name="schedule_mode",
+        translation_key="schedule_mode",
+        fallback_name="Schedule mode",
+    )
+    .tuya_switch(
+        dp_id=130,
+        attribute_name="scale_protection",
+        translation_key="scale_protection",
+        fallback_name="Scale protection",
+    )
+    .adds(TuyaThermostatV2)
+    .skip_configuration()
+    .add_to_registry()
+)

@@ -89,6 +89,15 @@ TUYA_SYS_MODE_V02 = {
     ],
 }
 
+TUYA_SYS_MODE_V03 = {
+    Thermostat.SystemMode.Heat: [
+        b"\x01\x02\x00\x00\x02\x65\x01\x00\x01\x01",
+    ],
+    Thermostat.SystemMode.Off: [
+        b"\x01\x03\x00\x00\x03\x65\x01\x00\x01\x00",
+    ],
+}
+
 TUYA_SYS_MODE_V04 = {
     Thermostat.SystemMode.Heat: [b"\x01\x02\x00\x00\x02\x02\x04\x00\x01\x03"],
     Thermostat.SystemMode.Off: [b"\x01\x03\x00\x00\x03\x02\x04\x00\x01\x02"],
@@ -116,6 +125,15 @@ TUYA_SYS_MODE_V04 = {
             TUYA_SYS_MODE_V02,
             zha.DeviceType.THERMOSTAT,  # quirk replaces device type with THERMOSTAT
             True,  # Enusure schedule is turned off
+        ),
+        (
+            "_TZE200_ne4pikwm",
+            "TS0601",
+            TUYA_TEST_PLAN_V02,
+            TUYA_SP_V02,
+            TUYA_SYS_MODE_V03,
+            None,  # test device has specific device type, real one has SMART_PLUG
+            False,
         ),
         (
             "_TZE204_qyr2m29i",
