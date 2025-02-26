@@ -9,8 +9,13 @@ from zigpy.quirks.v2.homeassistant.sensor import SensorStateClass
 import zigpy.types as t
 from zigpy.zcl.clusters.hvac import RunningState, Thermostat
 
+from zhaquirks.tuya import TUYA_CLUSTER_ID
 from zhaquirks.tuya.builder import TuyaQuirkBuilder
-from zhaquirks.tuya.mcu import TuyaAttributesCluster
+from zhaquirks.tuya.mcu import (
+    DPToAttributeMapping,
+    TuyaAttributesCluster,
+    TuyaMCUCluster,
+)
 
 
 class TuyaThermostatSystemMode(t.enum8):
@@ -63,6 +68,45 @@ class ScreenOrientation(t.enum8):
     Right = 0x01
     Down = 0x02
     Left = 0x03
+
+
+class TuyaDisplayBrightness(t.enum8):
+    """Tuya display brightness mode."""
+
+    High = 0x00
+    Medium = 0x01
+    Low = 0x02
+
+
+class TuyaMotorThrust(t.enum8):
+    """Tuya motor thrust mode."""
+
+    Strong = 0x00
+    Middle = 0x01
+    Weak = 0x02
+
+
+class TuyaDisplayOrientation(t.enum8):
+    """Tuya display orientation mode."""
+
+    Up = 0x00
+    Down = 0x01
+
+
+class TuyaHysteresis(t.enum8):
+    """Tuya hysteresis mode."""
+
+    Comfort = 0x00
+    Eco = 0x01
+
+
+class TuyaPresetMode(t.enum8):
+    """Tuya preset mode."""
+
+    Eco = 0x00
+    Auto = 0x01
+    Off = 0x02
+    Heat = 0x03
 
 
 class TuyaThermostatV2(Thermostat, TuyaAttributesCluster):
@@ -601,6 +645,200 @@ class TuyaThermostatV2NoSchedule(TuyaThermostatV2):
     )
     .adds(TuyaThermostatV2)
     .tuya_enchantment()
+    .skip_configuration()
+    .add_to_registry()
+)
+
+
+# Moes TRV602Z and TRV801Z
+(
+    TuyaQuirkBuilder("_TZE204_qyr2m29i", "TS0601")
+    .applies_to("_TZE204_ltwbm23f", "TS0601")
+    .tuya_dp(
+        dp_id=3,
+        ep_attribute=TuyaThermostatV2.ep_attribute,
+        attribute_name=TuyaThermostatV2.AttributeDefs.running_state.name,
+        converter=lambda x: 0x01 if not x else 0x00,  # Heat, Idle
+    )
+    .tuya_dp(
+        dp_id=4,
+        ep_attribute=TuyaThermostatV2.ep_attribute,
+        attribute_name=TuyaThermostatV2.AttributeDefs.occupied_heating_setpoint.name,
+        converter=lambda x: x * 10,
+        dp_converter=lambda x: x // 10,
+    )
+    .tuya_dp(
+        dp_id=5,
+        ep_attribute=TuyaThermostatV2.ep_attribute,
+        attribute_name=TuyaThermostatV2.AttributeDefs.local_temperature.name,
+        converter=lambda x: x * 10,
+    )
+    .tuya_number(
+        dp_id=47,
+        attribute_name=TuyaThermostatV2NoSchedule.AttributeDefs.local_temperature_calibration.name,
+        type=t.int32s,
+        min_value=-6,
+        max_value=6,
+        unit=UnitOfTemperature.CELSIUS,
+        step=1,
+        translation_key="local_temperature_calibration",
+        fallback_name="Local temperature calibration",
+    )
+    .tuya_dp_multi(
+        dp_id=2,
+        attribute_mapping=[
+            DPToAttributeMapping(
+                ep_attribute=TuyaThermostatV2.ep_attribute,
+                attribute_name=TuyaThermostatV2.AttributeDefs.system_mode.name,
+                converter=lambda x: {
+                    TuyaPresetMode.Auto: Thermostat.SystemMode.Auto,
+                    TuyaPresetMode.Eco: Thermostat.SystemMode.Auto,
+                    TuyaPresetMode.Heat: Thermostat.SystemMode.Heat,
+                    TuyaPresetMode.Off: Thermostat.SystemMode.Off,
+                }[x],
+                dp_converter=lambda x: {
+                    Thermostat.SystemMode.Auto: TuyaPresetMode.Auto,
+                    Thermostat.SystemMode.Heat: TuyaPresetMode.Heat,
+                    Thermostat.SystemMode.Off: TuyaPresetMode.Off,
+                }[x],
+            ),
+            DPToAttributeMapping(
+                ep_attribute=TuyaMCUCluster.ep_attribute,
+                attribute_name="preset_mode",
+            ),
+        ],
+    )
+    .tuya_attribute(
+        dp_id=2,
+        attribute_name="preset_mode",
+        type=t.uint16_t,
+        is_manufacturer_specific=True,
+    )
+    .enum(
+        attribute_name="preset_mode",
+        cluster_id=TUYA_CLUSTER_ID,
+        enum_class=TuyaPresetMode,
+        translation_key="preset_mode",
+        fallback_name="Preset mode",
+    )
+    .tuya_battery(dp_id=6)
+    .tuya_switch(
+        dp_id=7,
+        attribute_name="child_lock",
+        translation_key="child_lock",
+        fallback_name="Child lock",
+    )
+    .tuya_number(
+        dp_id=9,
+        attribute_name="max_temperature",
+        type=t.uint16_t,
+        unit=UnitOfTemperature.CELSIUS,
+        min_value=15,
+        max_value=35,
+        step=1,
+        multiplier=0.1,
+        translation_key="max_temperature",
+        fallback_name="Max temperature",
+    )
+    .tuya_number(
+        dp_id=10,
+        attribute_name="min_temperature",
+        type=t.uint16_t,
+        unit=UnitOfTemperature.CELSIUS,
+        min_value=1,
+        max_value=15,
+        step=1,
+        multiplier=0.1,
+        translation_key="min_temperature",
+        fallback_name="Min temperature",
+    )
+    .tuya_switch(
+        dp_id=14,
+        attribute_name="window_detection",
+        translation_key="window_detection",
+        fallback_name="Open window detection",
+    )
+    .tuya_binary_sensor(
+        dp_id=15,
+        attribute_name="window_open",
+        device_class=BinarySensorDeviceClass.WINDOW,
+        fallback_name="Window open",
+    )
+    .tuya_enum(
+        dp_id=110,
+        attribute_name="motor_thrust",
+        enum_class=TuyaMotorThrust,
+        translation_key="motor_thrust",
+        fallback_name="Motor thrust",
+    )
+    .tuya_enum(
+        dp_id=111,
+        attribute_name="display_brightness",
+        enum_class=TuyaDisplayBrightness,
+        translation_key="display_brightness",
+        fallback_name="Display brightness",
+    )
+    .tuya_enum(
+        dp_id=113,
+        attribute_name="display_orientation",
+        enum_class=TuyaDisplayOrientation,
+        translation_key="display_orientation",
+        fallback_name="Display orientation",
+    )
+    .tuya_sensor(
+        dp_id=114,
+        attribute_name="valve_position",
+        type=t.int16s,
+        divisor=10,
+        state_class=SensorStateClass.MEASUREMENT,
+        unit=PERCENTAGE,
+        translation_key="valve_position",
+        fallback_name="Valve position",
+    )
+    .tuya_number(
+        dp_id=119,
+        attribute_name="comfort_temperature",
+        type=t.uint16_t,
+        unit=UnitOfTemperature.CELSIUS,
+        min_value=5,
+        max_value=30,
+        step=1,
+        multiplier=0.1,
+        translation_key="comfort_temperature",
+        fallback_name="Comfort temperature",
+    )
+    .tuya_number(
+        dp_id=120,
+        attribute_name="eco_temperature",
+        type=t.uint16_t,
+        unit=UnitOfTemperature.CELSIUS,
+        min_value=5,
+        max_value=30,
+        step=1,
+        multiplier=0.1,
+        translation_key="eco_temperature",
+        fallback_name="Eco temperature",
+    )
+    .tuya_number(
+        dp_id=121,
+        attribute_name="holiday_temperature",
+        type=t.uint16_t,
+        unit=UnitOfTemperature.CELSIUS,
+        min_value=5,
+        max_value=30,
+        step=1,
+        multiplier=0.1,
+        translation_key="holiday_temperature",
+        fallback_name="Holiday temperature",
+    )
+    .tuya_enum(
+        dp_id=127,
+        attribute_name="hysteresis_mode",
+        enum_class=TuyaDisplayOrientation,
+        translation_key="hysteresis_mode",
+        fallback_name="Hysteresis mode",
+    )
+    .adds(TuyaThermostatV2)
     .skip_configuration()
     .add_to_registry()
 )
