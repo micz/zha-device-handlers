@@ -33,8 +33,40 @@ class EwelinkCluster(CustomCluster):
         return False
 
 
+def is_water_shortage(valve_state: ValveState) -> bool:
+    """Check if the valve state indicates water shortage."""
+    return valve_state in {
+        ValveState.Water_Shortage,
+        ValveState.Water_Shortage_And_Leakage,
+    }
+
+
+def is_water_leakage(valve_state: ValveState) -> bool:
+    """Check if the valve state indicates water leakage."""
+    return valve_state in {
+        ValveState.Water_Leakage,
+        ValveState.Water_Shortage_And_Leakage,
+    }
+
+
 (
     QuirkBuilder("SONOFF", "SWV")
     .replaces(EwelinkCluster)
+    .binary_sensor(
+            EwelinkCluster.AttributeDefs.water_valve_state.name,
+            EwelinkCluster.cluster_id,
+            translation_key="water_shortage",
+            fallback_name="Water Shortage",
+            unique_id_suffix="water_shortage",
+            attribute_converter=is_water_shortage,
+        )
+    .binary_sensor(
+            EwelinkCluster.AttributeDefs.water_valve_state.name,
+            EwelinkCluster.cluster_id,
+            translation_key="water_leakage",
+            fallback_name="Water Leakage",
+            unique_id_suffix="water_leakage",
+            attribute_converter=is_water_leakage,
+        )
     .add_to_registry()
 )  # fmt: skip
