@@ -1,15 +1,14 @@
-import asyncio
+from unittest.mock import ANY, AsyncMock, MagicMock
+
 import pytest
-import zigpy.types as t
 from zigpy.zcl.foundation import Status
-from unittest.mock import AsyncMock, MagicMock, ANY
 
 from zhaquirks.sonoff.swv import (
-    ValveState,
-    is_water_shortage,
-    is_water_leakage,
     EwelinkCluster,
     SwvOnOff,
+    ValveState,
+    is_water_leakage,
+    is_water_shortage,
 )
 
 
