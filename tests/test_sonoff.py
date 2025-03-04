@@ -1,3 +1,5 @@
+"""Tests for Sonoff."""
+
 import asyncio
 import pytest
 import zigpy.types as t
