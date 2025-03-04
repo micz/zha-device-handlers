@@ -3,7 +3,7 @@
 import asyncio
 import typing
 
-from homeassistant.components.number import NumberDeviceClass
+from zigpy.quirks.v2.homeassistant.number import NumberDeviceClass
 from zigpy.quirks import CustomCluster
 from zigpy.quirks.v2 import QuirkBuilder
 import zigpy.types as t
