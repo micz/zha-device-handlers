@@ -50,6 +50,21 @@ class SwvOnOff(NoReplyMixin, CustomCluster, OnOff):
     cluster_id = OnOff.cluster_id
     cmd_values = OnOff.commands_by_name.values()
 
+    """
+    Send a command to the device.
+
+    Args:
+        command_id (foundation.GeneralCommand | int | t.uint8_t): The ID of the command to send.
+        *args: Additional arguments for the command.
+        manufacturer (int | t.uint16_t | None, optional): The manufacturer ID. Defaults to None.
+        expect_reply (bool, optional): Whether to expect a reply from the device. Defaults to True.
+        tsn (int | t.uint8_t | None, optional): The transaction sequence number. Defaults to None.
+        **kwargs (typing.Any): Additional keyword arguments for the command.
+
+    Returns:
+        typing.Coroutine: A coroutine that sends the command and waits for the response.
+    """
+
     async def command(
         self,
         command_id: foundation.GeneralCommand | int | t.uint8_t,
