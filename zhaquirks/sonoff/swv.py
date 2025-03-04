@@ -61,8 +61,7 @@ class SwvOnOff(NoReplyMixin, CustomCluster, OnOff):
         tsn: int | t.uint8_t | None = None,
         **kwargs: typing.Any,
     ) -> typing.Coroutine:
-        """
-        Send a command to the device.
+        """Send a command to the device.
 
         Args:
             command_id (foundation.GeneralCommand | int | t.uint8_t): The ID of the command to send.
@@ -74,6 +73,7 @@ class SwvOnOff(NoReplyMixin, CustomCluster, OnOff):
 
         Returns:
             typing.Coroutine: A coroutine that sends the command and waits for the response.
+
         """
         command = self.server_commands[command_id]
 
