@@ -63,6 +63,9 @@ class SwvOnOff(NoReplyMixin, CustomCluster, OnOff):
     ) -> typing.Coroutine:
         """Send a command to the device.
 
+        If on_time == 0 it keeps the normal On command (0x01)
+        If on_time != 0 it sends a on_with_timed_off (0x42), with the on_time numbers of seconds sets in the attribute
+
         Args:
             command_id (foundation.GeneralCommand | int | t.uint8_t): The ID of the command to send.
             *args: Additional arguments for the command.
@@ -105,7 +108,6 @@ class SwvOnOff(NoReplyMixin, CustomCluster, OnOff):
     async def _turn_off_later(self, delay):
         """We are not receiving the auto off event, so we force an update."""
         await asyncio.sleep(delay + 1)
-        # self._update_attribute(self.AttributeDefs.on_off.id, False)
         await self.endpoint.on_off.read_attributes(["on_off"])
 
 
