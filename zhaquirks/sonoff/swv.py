@@ -1,15 +1,17 @@
 """Sonoff SWV - Zigbee smart water valve."""
 
+import asyncio
+import typing
+
+from homeassistant.components.number import NumberDeviceClass
 from zigpy.quirks import CustomCluster
 from zigpy.quirks.v2 import QuirkBuilder
 import zigpy.types as t
 from zigpy.zcl import foundation
-from zigpy.zcl.foundation import BaseAttributeDefs, ZCLAttributeDef
 from zigpy.zcl.clusters.general import OnOff
+from zigpy.zcl.foundation import BaseAttributeDefs, ZCLAttributeDef
+
 from zhaquirks import NoReplyMixin
-from homeassistant.components.number import NumberDeviceClass
-import typing
-import asyncio
 
 
 class ValveState(t.enum8):
