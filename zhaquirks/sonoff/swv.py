@@ -3,7 +3,13 @@
 from zigpy.quirks import CustomCluster
 from zigpy.quirks.v2 import QuirkBuilder
 import zigpy.types as t
+from zigpy.zcl import foundation
 from zigpy.zcl.foundation import BaseAttributeDefs, ZCLAttributeDef
+from zigpy.zcl.clusters.general import OnOff
+from zhaquirks import NoReplyMixin
+from homeassistant.components.number import NumberDeviceClass
+import typing
+import asyncio
 
 
 class ValveState(t.enum8):
@@ -28,9 +34,63 @@ class EwelinkCluster(CustomCluster):
             type=ValveState,
         )
 
+        on_time = ZCLAttributeDef(
+            id=0x5011,
+            type=t.uint16_t,
+        )
+
     @property
     def _is_manuf_specific(self):
         return False
+
+
+class SwvOnOff(NoReplyMixin, CustomCluster, OnOff):
+    """SWV On Off Cluster."""
+
+    cluster_id = OnOff.cluster_id
+    cmd_values = OnOff.commands_by_name.values()
+
+    async def command(
+        self,
+        command_id: foundation.GeneralCommand | int | t.uint8_t,
+        *args,
+        manufacturer: int | t.uint16_t | None = None,
+        expect_reply: bool = True,
+        tsn: int | t.uint8_t | None = None,
+        **kwargs: typing.Any,
+    ) -> typing.Coroutine:
+        command = self.server_commands[command_id]
+
+        if manufacturer is None and (
+            self._is_manuf_specific or command.is_manufacturer_specific
+        ):
+            manufacturer = self._manufacturer_id
+        if command_id == 0x01:
+            base_cluster = self.endpoint.in_clusters[EwelinkCluster.cluster_id]
+            on_time_value = base_cluster.get(EwelinkCluster.AttributeDefs.on_time.id)
+            if on_time_value is not None and on_time_value != 0:
+                command = self.server_commands[0x42]  # on_with_timed_off
+                kwargs["on_off_control"] = 0x00
+                kwargs["on_time"] = on_time_value
+                kwargs["off_wait_time"] = 1
+                self.create_catching_task(self._turn_off_later(on_time_value))
+
+        return await self.request(
+            False,
+            command.id,
+            command.schema,
+            *args,
+            manufacturer=manufacturer,
+            expect_reply=expect_reply,
+            tsn=tsn,
+            **kwargs,
+        )
+
+    async def _turn_off_later(self, delay):
+        """We are not receiving the auto off event, so we force an update."""
+        await asyncio.sleep(delay + 1)
+        # self._update_attribute(self.AttributeDefs.on_off.id, False)
+        await self.endpoint.on_off.read_attributes(["on_off"])
 
 
 def is_water_shortage(valve_state: ValveState) -> bool:
@@ -52,6 +112,7 @@ def is_water_leakage(valve_state: ValveState) -> bool:
 (
     QuirkBuilder("SONOFF", "SWV")
     .replaces(EwelinkCluster)
+    .replaces(SwvOnOff)
     .binary_sensor(
             EwelinkCluster.AttributeDefs.water_valve_state.name,
             EwelinkCluster.cluster_id,
@@ -67,6 +128,16 @@ def is_water_leakage(valve_state: ValveState) -> bool:
             fallback_name="Water Leakage",
             unique_id_suffix="water_leakage",
             attribute_converter=is_water_leakage,
+        )
+    .number(
+            EwelinkCluster.AttributeDefs.on_time.name,
+            EwelinkCluster.cluster_id,
+            translation_key="auto_close_time",
+            fallback_name="Auto Close Time",
+            unique_id_suffix="auto_close_time",
+            min_value=0,
+            max_value=3600,
+            device_class=NumberDeviceClass.DURATION,
         )
     .add_to_registry()
 )  # fmt: skip
