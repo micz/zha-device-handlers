@@ -113,18 +113,12 @@ class SwvOnOff(NoReplyMixin, CustomCluster, OnOff):
 
 def is_water_shortage(valve_state: ValveState) -> bool:
     """Check if the valve state indicates water shortage."""
-    return valve_state in {
-        ValveState.Water_Shortage,
-        ValveState.Water_Shortage_And_Leakage,
-    }
+    return bool(valve_state & ValveState.Water_Shortage)
 
 
 def is_water_leakage(valve_state: ValveState) -> bool:
     """Check if the valve state indicates water leakage."""
-    return valve_state in {
-        ValveState.Water_Leakage,
-        ValveState.Water_Shortage_And_Leakage,
-    }
+    return bool(valve_state & ValveState.Water_Leakage)
 
 
 (
