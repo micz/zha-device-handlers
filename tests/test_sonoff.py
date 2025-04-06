@@ -5,11 +5,7 @@ from unittest.mock import ANY, AsyncMock, MagicMock
 import pytest
 from zigpy.zcl.foundation import Status
 
-from zhaquirks.sonoff.swv import (
-    CustomSonoffCluster,
-    SwvOnOff,
-    ValveState,
-)
+from zhaquirks.sonoff.swv import CustomSonoffCluster, SwvOnOff
 
 
 @pytest.mark.asyncio
