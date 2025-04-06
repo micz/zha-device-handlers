@@ -4,11 +4,10 @@ import asyncio
 import typing
 
 from zigpy.quirks import CustomCluster
-from zigpy.quirks.v2 import QuirkBuilder
-from zigpy.quirks.v2.homeassistant.number import NumberDeviceClass
+from zigpy.quirks.v2 import QuirkBuilder, ReportingConfig
+from zigpy.quirks.v2.homeassistant.binary_sensor import BinarySensorDeviceClass
 import zigpy.types as t
 from zigpy.zcl import foundation
-from zigpy.zcl.clusters.general import OnOff
 from zigpy.zcl.foundation import BaseAttributeDefs, ZCLAttributeDef
 
 from zhaquirks import NoReplyMixin
@@ -23,10 +22,11 @@ class ValveState(t.enum8):
     Water_Shortage_And_Leakage = 3
 
 
-class EwelinkCluster(CustomCluster):
-    """Ewelink specific cluster."""
+class CustomSonoffCluster(CustomCluster):
+    """Custom Sonoff cluster."""
 
     cluster_id = 0xFC11
+    manufacturer_id_override: t.uint16_t = foundation.ZCLHeader.NO_MANUFACTURER_ID
 
     class AttributeDefs(BaseAttributeDefs):
         """Attribute definitions."""
@@ -123,33 +123,27 @@ def is_water_leakage(valve_state: ValveState) -> bool:
 
 (
     QuirkBuilder("SONOFF", "SWV")
-    .replaces(EwelinkCluster)
-    .replaces(SwvOnOff)
+    .replaces(CustomSonoffCluster)
     .binary_sensor(
-            EwelinkCluster.AttributeDefs.water_valve_state.name,
-            EwelinkCluster.cluster_id,
-            translation_key="water_shortage",
-            fallback_name="Water Shortage",
-            unique_id_suffix="water_shortage",
-            attribute_converter=is_water_shortage,
-        )
+        CustomSonoffCluster.AttributeDefs.water_valve_state.name,
+        CustomSonoffCluster.cluster_id,
+        device_class=BinarySensorDeviceClass.MOISTURE,
+        attribute_converter=lambda x: x & ValveState.Water_Leakage,
+        unique_id_suffix="water_leak_status",
+        reporting_config=ReportingConfig(
+            min_interval=30, max_interval=900, reportable_change=1
+        ),
+        translation_key="water_leak",
+        fallback_name="Water leak",
+    )
     .binary_sensor(
-            EwelinkCluster.AttributeDefs.water_valve_state.name,
-            EwelinkCluster.cluster_id,
-            translation_key="water_leakage",
-            fallback_name="Water Leakage",
-            unique_id_suffix="water_leakage",
-            attribute_converter=is_water_leakage,
-        )
-    .number(
-            EwelinkCluster.AttributeDefs.on_time.name,
-            EwelinkCluster.cluster_id,
-            translation_key="auto_close_time",
-            fallback_name="Auto Close Time",
-            unique_id_suffix="auto_close_time",
-            min_value=0,
-            max_value=3600,
-            device_class=NumberDeviceClass.DURATION,
-        )
+        CustomSonoffCluster.AttributeDefs.water_valve_state.name,
+        CustomSonoffCluster.cluster_id,
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        attribute_converter=lambda x: x & ValveState.Water_Shortage,
+        unique_id_suffix="water_supply_status",
+        translation_key="water_supply",
+        fallback_name="Water supply",
+    )
     .add_to_registry()
-)  # fmt: skip
+)
